@@ -12,7 +12,7 @@
 #include "SPI.h"
 #include "TFT_22_ILI9225.h"
 #define BLOCK_SIZE 32
-#define SERVICE_UUID (uint16_t)0x182D
+#define SERVICE_UUID (uint16_t)0x181D
 #define CHARACTERISTIC_UUID_RX "78604f25-789e-432e-b949-6fb2306fd5d7"
 #define CHARACTERISTIC_UUID_SSID "98a8d501-07ab-42a9-94e1-d590839bf71b"
 #define CHARACTERISTIC_UUID_PASS "2b9310ca-d12c-4940-a436-c33e32be84c7"
@@ -155,14 +155,11 @@ void ble_connect()
 }
 void wifi_connect() 
 {
-    //tft.clear();
     tft.setOrientation(3);
     tft.drawRectangle(0, 0, tft.maxX() - 1, tft.maxY() - 1, COLOR_WHITE);
     tft.setFont(Terminal12x16);
     tft.drawText(30, 80, "Connecting to" );
-    tft.drawText(70, 100, String(ssid));
-    tft.clear();
-    //display.display();
+    tft.drawText(30, 100, String(ssid));
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -170,12 +167,12 @@ void wifi_connect()
   }
   
   Serial.println("");
-    //tft.clear();
-    //tft.setOrientation(3);
-    ////tft.drawRectangle(0, 0, tft.maxX() - 1, tft.maxY() - 1, COLOR_WHITE);
-    //tft.setFont(Terminal12x16);
-    //tft.drawText(38, 80, "WIFI Connected" );
-    ////tft.clear();
+    tft.setOrientation(3);
+    tft.drawRectangle(0, 0, tft.maxX() - 1, tft.maxY() - 1, COLOR_WHITE);
+    tft.setFont(Terminal12x16);
+    tft.drawText(38, 80, "WIFI Connected" );
+    tft.drawText(48, 100, "IP address" );
+    tft.drawText(48, 120, String (WiFi.localIP()));
     delay(500);
 }
 
@@ -269,7 +266,7 @@ void hashing(char* payload)
 
 void postData(char* data) 
 {
-  String url = "http://" + server + ":" + port + "/input/ambilberat";
+  String url = "http://" + server + ":" + port + "/input/ambilberat"; //diserver namanya apa?
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
   String weight = data;
@@ -288,10 +285,15 @@ void postData(char* data)
 
 void sendParam(uint32_t pub) 
 {
-  String url = "http://" + server + ":" + port + "/postkeyberat";
+  String url = "http://" + server + ":" + port + "/postkey";
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
   String pub_key = String(pub);
+  
+  //int iv_size = sizeof(iv);
+  //char encoded_iv[64];
+  //encode_base64(iv, iv_size, (unsigned char*)encoded_iv);
+  
   String iv = String(encoded_iv);
   Serial.println(iv);
   int httpResponseCode = http.POST("{\"pub_key\":\"" + pub_key + "\", \"iv\":\"" + iv + "\"}");
@@ -309,7 +311,7 @@ void sendParam(uint32_t pub)
 
 void getParam() 
 {
-  String url = "http://" + server + ":" + port + "/pkberat";
+  String url = "http://" + server + ":" + port + "/pk";
   http.begin(url);
   int httpCode = http.GET();
   if (httpCode > 0) {
@@ -331,13 +333,12 @@ void intro()
     tft.setOrientation(3);
     tft.drawRectangle(0, 0, tft.maxX() - 1, tft.maxY() - 1, COLOR_WHITE);
     tft.setFont(Terminal12x16);
-    tft.drawText(38, 30, "Telemedicine " );
+    tft.drawText(38, 80, "Telemedicine " );
     delay(5000);
 }
 void tampilWeight() 
 {
-    
-    //tft.clear();
+    tft.clear();
     tft.setOrientation(3);
     tft.drawRectangle(0, 0, tft.maxX() - 1, tft.maxY() - 1, COLOR_WHITE);
     tft.setFont(Terminal12x16);
@@ -382,12 +383,7 @@ void setup() {
   pinMode (LED, OUTPUT);
   pinMode (4, INPUT);
 
-// if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-// Serial.println(F("SSD1306 allocation failed"));
-//for (;;);
-// }
-
-  intro();
+ intro();
   
   ble_connect();
   
@@ -401,21 +397,21 @@ void setup() {
     tft.setOrientation(3);
     tft.drawRectangle(0, 0, tft.maxX() - 1, tft.maxY() - 1, COLOR_WHITE);
     tft.setFont(Terminal12x16);
-    tft.drawText(38, 30, "Mode Bluetooth " );    
+    tft.drawText(38, 80, "Mode Bluetooth " );
     delay(2000);
     makeIV();
     pIVCharacteristic->setValue(encoded_iv);
     }      
     else if(choose == 2) {
-      tft.clear();
       Serial.println("Lewat Wifi");
+      //tft.clear();
       tft.setOrientation(3);
       tft.drawRectangle(0, 0, tft.maxX() - 1, tft.maxY() - 1, COLOR_WHITE);
       tft.setFont(Terminal12x16);
-      tft.drawText(58, 30, "Mode Wi-Fi" );
-      //tft.drawText(62, 70, "Masukkan" );
-      //tft.drawText(44, 90, "SSID dan Pass" );
-      //delay(200);
+      tft.drawText(58, 80, "Mode Wi-Fi" );
+      //tft.drawText(38, 100, "Masukkan SSID dan Pass" );
+      //tft.clear();
+      //delay(2000);
       while (ssid == "-" || password == "-") {
         Serial.println(ssid);
         Serial.println(password);
@@ -426,6 +422,7 @@ void setup() {
       wifi_connect();
       makeParam();
       sendParam(A);
+
       Serial.println("wakut selesai wifi init ");
     } 
   }
@@ -492,14 +489,12 @@ void loop() {
   int length = 0;
   bufferSize(plain_text, length);
   char encrypted[length];
-  micros();
   encrypt(plain_text, encrypted, length);
   
   Serial.println("");
   Serial.print("Encrypted: ");
   Serial.println(encrypted);
-  Serial.print("Lama Enkripsi: ");
-  Serial.println(micros());
+  
   if (deviceConnected) {
       if (choose == 1) {
         char data[8];
